@@ -2,7 +2,7 @@ from typing import Optional, IO
 from pathlib import Path
 import logging
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, LearningCurveDisplay
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
@@ -27,6 +27,7 @@ class GenericModel:
         test_size: float = 0.2,
     ) -> None:
         try:
+            self.algo = algo_name
             self.model = self.ALGO_MAPPER[algo_name]()
         except KeyError:
             log.error(f"{algo_name} not supported!")
@@ -44,12 +45,25 @@ class GenericModel:
         else:
             log.error(f"Filepath: {filepath} does not exists or is not a csv!")
 
-    def split_data(self, data):
-        train_df, test_df = train_test_split(data, test_size=self.test_size)
-        log.info(
-            f"# Training examples: {train_df.shape[0]}, # Test Examples: {test_df.shape[0]}"
+    def pre_process_data(self, data: pd.DataFrame):
+        data = data.infer_objects()
+        for column in data.select_dtypes(include="object").columns:
+            data = pd.concat(
+                (data, pd.get_dummies(data[column], prefix=column, prefix_sep="_")),
+                axis=1,
+            )
+            data.drop(columns=column, inplace=True)
+
+        return data
+
+    def split_data(self, X, y):
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=self.test_size
         )
-        return train_df, test_df
+        log.info(
+            f"# Training examples: {X_train.shape[0]}, # Test Examples: {X_test.shape[0]}"
+        )
+        return X_train, y_train, X_test, y_test
 
     def create_report(self, true_values, predictions):
         report = {
@@ -87,6 +101,19 @@ class GenericModel:
 
         return self.model.predict(features)
 
+    def create_learning_curve(self, X, y):
+        display = LearningCurveDisplay.from_estimator(
+            self.model,
+            X,
+            y,
+            cv=3,
+            score_name="accuracy",
+            score_type="both",
+            scoring="accuracy",
+        )
+        display.figure_.savefig("learning_curve.png")
+        return display
+
     def run(self):
         try:
             data = pd.read_csv(self.file)
@@ -100,13 +127,14 @@ class GenericModel:
             )
             return
 
-        if data[self.target_var].nunique() > 2:
+        y = data.pop(self.target_var)
+        if y.nunique() > 2:
             self.multiclass = True
 
-        X_train, X_test = self.split_data(data)
-        y_train = X_train.pop(self.target_var)
-        y_test = X_test.pop(self.target_var)
+        log.info(f"Pre-processing data to convert string to floats...")
+        data = self.pre_process_data(data)
 
+        X_train, y_train, X_test, y_test = self.split_data(data, y)
         self.train_model(X_train, y_train)
 
         log.info("Getting Train Predictions...")
@@ -122,4 +150,6 @@ class GenericModel:
         test_report = self.create_report(
             true_values=y_test, predictions=test_predictions
         )
+
+        self.create_learning_curve(data, y)
         return {"train": train_report, "test": test_report}
