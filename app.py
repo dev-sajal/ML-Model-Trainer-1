@@ -1,7 +1,6 @@
-from typing import Optional
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
 import uvicorn
 
 from model import GenericModel
@@ -17,27 +16,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ModelSchema(BaseModel):
-    algo_name: str
-    filepath: str
-    target_var: str
-    test_size: Optional[float] = 0.2
-   
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Hello, World!"}
 
 @app.post("/generate")
-async def generate_report(schema: ModelSchema):
-    model = GenericModel(**schema.dict())
+async def generate_report(
+    algo_name: str = Form(...),
+    target_var: str = Form(...),
+    file: UploadFile = File(...),
+    test_size: float = Form(0.2),
+):
+    model = GenericModel(
+        algo_name=algo_name,
+        file=file.file,
+        target_var=target_var,
+        test_size=test_size,
+    )
     reports = model.run()
-    return reports
-# Add OPTIONS support for the "/generate" endpoint
-@app.options("/generate")
-async def options_generate():
-    return {"allow": "POST, OPTIONS"}
+    return JSONResponse(content=reports)
+
 
 if __name__ == "__main__":
-    uvicorn.run(app)
+    uvicorn.run("app:app", reload=True)

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, IO
 from pathlib import Path
 import logging
 
@@ -22,19 +22,19 @@ class GenericModel:
     def __init__(
         self,
         algo_name: str,
-        filepath: str,
+        file: IO,
         target_var: str,
         test_size: float = 0.2,
-        
     ) -> None:
         try:
-            self.model = self.ALGO_MAPPER[algo_name]
+            self.model = self.ALGO_MAPPER[algo_name]()
         except KeyError:
             log.error(f"{algo_name} not supported!")
 
-        self.filepath = filepath
+        self.file = file
         self.test_size = test_size
         self.target_var = target_var
+        self.multiclass = False
 
     def read_file(self, filepath: str) -> Optional[pd.DataFrame]:
         filepath = Path(filepath)
@@ -54,8 +54,19 @@ class GenericModel:
     def create_report(self, true_values, predictions):
         report = {
             "accuracy": metrics.accuracy_score(true_values, predictions),
-            "f1-score": metrics.f1_score(true_values, predictions),
-            "confusion_matrix": metrics.confusion_matrix(true_values, predictions),
+            "precision": metrics.precision_score(
+                true_values,
+                predictions,
+                average="micro" if self.multiclass else "binary",
+            ),
+            "f1-score": metrics.f1_score(
+                true_values,
+                predictions,
+                average="micro" if self.multiclass else "binary",
+            ),
+            "confusion_matriex": metrics.confusion_matrix(
+                true_values, predictions
+            ).tolist(),
         }
         return report
 
@@ -77,8 +88,10 @@ class GenericModel:
         return self.model.predict(features)
 
     def run(self):
-        data = self.read_file(self.filepath)
-        if data is None:
+        try:
+            data = pd.read_csv(self.file)
+        except Exception as e:
+            log.error(f"Error reading file: {e}", exc_info=True)
             return
 
         if self.target_var not in data.columns:
@@ -86,6 +99,9 @@ class GenericModel:
                 f"{self.target_var} not found in data. Provide exact column name."
             )
             return
+
+        if data[self.target_var].nunique() > 2:
+            self.multiclass = True
 
         X_train, X_test = self.split_data(data)
         y_train = X_train.pop(self.target_var)
@@ -106,4 +122,4 @@ class GenericModel:
         test_report = self.create_report(
             true_values=y_test, predictions=test_predictions
         )
-        return train_report, test_report
+        return {"train": train_report, "test": test_report}
