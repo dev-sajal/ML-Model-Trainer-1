@@ -1,0 +1,62 @@
+.container {
+}
+.Table{
+  height: 30%;
+  width: 80%;
+  padding-right: 20px;
+  padding-bottom: 30px;
+  overflow-x: auto;
+  overflow-y: auto;
+  
+} 
+th{
+  padding:8px;
+}
+  .split {
+    
+    /* Adjust width as needed */
+  height: 100%;
+  width: 40%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  overflow-y: auto;
+ 
+  
+   /* Example background color */
+  }
+  .left-section{
+   background-color : #e6e6fa;
+   padding-left : 20px;
+   border : 1px solid purple;
+   top : 12%;
+   padding-right : 20px;
+   padding-top: 20px;
+   box-shadow: 0px 0px 5px 5px rgba(0, 0, 0, 0.5);
+  }
+  /* Add additional styling as per your design */
+  .left-section input[type='file'],
+  .left-section input[type='text'],
+  .left-section button {
+    margin-bottom: 30px;
+    /* Add more specific styles for inputs and button */
+  }
+  
+  /* Customize styles for specific elements within the left section */
+  /* Example: Target input[type='file'] within .left-section */
+  .left-section input[type='file'] {
+    /* Add specific styles */
+    
+  }
+
+  .right-section{
+    top : 12%;
+    right: 0;
+    background-color:#e6e6fa;
+    width : 50%;
+    
+    
+    
+    
+  }
+  
