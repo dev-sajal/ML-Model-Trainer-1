@@ -5,6 +5,8 @@ import logging
 from sklearn.model_selection import train_test_split, LearningCurveDisplay
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
 from sklearn import metrics
 import pandas as pd
 
@@ -17,6 +19,8 @@ class GenericModel:
         "Logistic Regression": LogisticRegression,
         "Linear Regression": LinearRegression,
         "Decision Tree": DecisionTreeClassifier,
+        "SVM": SVC,
+        "XGB": XGBClassifier,
     }
 
     def __init__(
